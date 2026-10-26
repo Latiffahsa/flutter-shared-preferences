@@ -5,14 +5,26 @@ import 'profile_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     final provider = UserProvider.of(context);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Home'),
         backgroundColor: Colors.deepPurple,
         foregroundColor: Colors.white,
+        actions: [
+          // [TAMBAH L1] tombol toggle tema
+          IconButton(
+            icon: Icon(
+              provider.isDarkMode ? Icons.light_mode : Icons.dark_mode,
+            ),
+            tooltip: provider.isDarkMode ? 'Mode terang' : 'Mode gelap',
+            onPressed: provider.toggleTheme,
+          ),
+        ],
       ),
       body: provider.isLoading
           ? const Center(child: CircularProgressIndicator())
