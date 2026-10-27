@@ -4,6 +4,7 @@ import '../providers/user_provider.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
@@ -12,7 +13,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
   late TextEditingController _emailController;
+  final _favoriteController = TextEditingController(); // Daftar Favorit
   bool _controllersInitialized = false;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -27,6 +30,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
+    _favoriteController.dispose(); // Daftar Favorit
     super.dispose();
   }
 
@@ -46,6 +50,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       );
     }
+  }
+
+  // Daftar Favorit tambah favorit
+  void _addFavorite() {
+    final text = _favoriteController.text.trim();
+    if (text.isEmpty) return;
+
+    final provider = UserProvider.of(context);
+    final sudahAda = provider.favorites.any(
+      (f) => f.toLowerCase() == text.toLowerCase(),
+    );
+    if (sudahAda) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Item sudah ada di daftar favorit')),
+      );
+      return;
+    }
+
+    provider.addFavorite(text);
+    _favoriteController.clear();
   }
 
   void _logout() {
@@ -75,6 +99,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final provider = UserProvider.of(context);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profil'),
@@ -155,6 +180,64 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           padding: const EdgeInsets.symmetric(vertical: 16),
                         ),
                       ),
+
+                      // Daftar Favorit ===== blok daftar favorit =====
+                      const SizedBox(height: 24),
+                      Text(
+                        'Daftar Favorit (Hobi)',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _favoriteController,
+                              decoration: const InputDecoration(
+                                labelText: 'Tambah favorit',
+                                prefixIcon: Icon(Icons.favorite),
+                                border: OutlineInputBorder(),
+                              ),
+                              onFieldSubmitted: (_) => _addFavorite(),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton.filled(
+                            onPressed: _addFavorite,
+                            icon: const Icon(Icons.add),
+                            tooltip: 'Tambah',
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      if (provider.favorites.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8),
+                          child: Text(
+                            'Belum ada favorit.',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        )
+                      else
+                        ...provider.favorites.map(
+                          (item) => ListTile(
+                            dense: true,
+                            contentPadding: EdgeInsets.zero,
+                            leading: const Icon(
+                              Icons.favorite,
+                              color: Colors.redAccent,
+                            ),
+                            title: Text(item),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.delete_outline),
+                              tooltip: 'Hapus',
+                              onPressed: () => provider.removeFavorite(item),
+                            ),
+                          ),
+                        ),
+                      // Daftar Favorit ===== akhir blok favorit =====
+
                       const SizedBox(height: 16),
                       Card(
                         color: Colors.amber[50],
@@ -171,6 +254,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     'Catatan Keamanan',
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
+                                      color: Colors.black87, //Daftar Favorit
                                     ),
                                   ),
                                 ],
@@ -180,7 +264,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 'Data disimpan di SharedPreferences (plaintext). '
                                 'Jangan simpan password atau data sensitif di sini. '
                                 'Gunakan secure storage untuk data sensitif.',
-                                style: TextStyle(fontSize: 12),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.black87, //Daftar Favorit
+                                ),
                               ),
                             ],
                           ),

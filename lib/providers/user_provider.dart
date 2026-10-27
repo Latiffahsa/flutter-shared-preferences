@@ -10,7 +10,10 @@ class UserProvider extends InheritedWidget {
   final bool isLoading;
   final bool isDarkMode;
   final VoidCallback toggleTheme;
-  final int visitCount; // counter
+  final int visitCount;
+  final List<String> favorites; // Daftar Favorit 
+  final Function(String) addFavorite; // Daftar Favorit 
+  final Function(String) removeFavorite; // Daftar Favorit 
 
   const UserProvider({
     super.key,
@@ -20,7 +23,10 @@ class UserProvider extends InheritedWidget {
     required this.isLoading,
     required this.isDarkMode,
     required this.toggleTheme,
-    required this.visitCount, // Counter
+    required this.visitCount,
+    required this.favorites, // Daftar Favorit 
+    required this.addFavorite, // Daftar Favorit 
+    required this.removeFavorite, // Daftar Favorit 
     required super.child,
   });
 
@@ -35,7 +41,8 @@ class UserProvider extends InheritedWidget {
     return oldWidget.user != user ||
         oldWidget.isLoading != isLoading ||
         oldWidget.isDarkMode != isDarkMode ||
-        oldWidget.visitCount != visitCount; // Counter
+        oldWidget.visitCount != visitCount ||
+        oldWidget.favorites != favorites; // Daftar Favorit
   }
 }
 
@@ -53,7 +60,8 @@ class _UserProviderWrapperState extends State<UserProviderWrapper> {
   User _user = User(name: '', email: '');
   bool _isLoading = true;
   bool _isDarkMode = false;
-  int _visitCount = 0; // Counter
+  int _visitCount = 0;
+  List<String> _favorites = []; // Daftar Favorit 
 
   @override
   void initState() {
@@ -68,15 +76,15 @@ class _UserProviderWrapperState extends State<UserProviderWrapper> {
     final email = prefs.getString('user_email') ?? '';
     final isLoggedIn = prefs.getBool('is_logged_in') ?? false;
     final isDark = prefs.getBool('is_dark_mode') ?? false;
-
-    //  counter tiap aplikasi dibuka
     final visits = (prefs.getInt('visit_count') ?? 0) + 1;
     await prefs.setInt('visit_count', visits);
+    final favs = prefs.getStringList('favorites') ?? []; // Daftar Favorit 
 
     setState(() {
       _user = User(name: name, email: email, isLoggedIn: isLoggedIn);
       _isDarkMode = isDark;
-      _visitCount = visits; // Counter
+      _visitCount = visits;
+      _favorites = favs; // Daftar Favorit 
       _isLoading = false;
     });
   }
@@ -115,6 +123,26 @@ class _UserProviderWrapperState extends State<UserProviderWrapper> {
     await prefs.setBool('is_dark_mode', newValue);
   }
 
+  // Daftar Favorit  tambah favorit
+  Future<void> _addFavorite(String item) async {
+    final newList = [..._favorites, item];
+    setState(() {
+      _favorites = newList;
+    });
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('favorites', newList);
+  }
+
+  // Daftar Favorit  hapus favorit
+  Future<void> _removeFavorite(String item) async {
+    final newList = _favorites.where((e) => e != item).toList();
+    setState(() {
+      _favorites = newList;
+    });
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('favorites', newList);
+  }
+
   @override
   Widget build(BuildContext context) {
     return UserProvider(
@@ -124,7 +152,10 @@ class _UserProviderWrapperState extends State<UserProviderWrapper> {
       isLoading: _isLoading,
       isDarkMode: _isDarkMode,
       toggleTheme: _toggleTheme,
-      visitCount: _visitCount, // Counter
+      visitCount: _visitCount,
+      favorites: _favorites, // Daftar Favorit 
+      addFavorite: _addFavorite, // Daftar Favorit 
+      removeFavorite: _removeFavorite, // Daftar Favorit 
       child: widget.child,
     );
   }
