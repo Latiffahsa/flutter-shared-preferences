@@ -16,7 +16,6 @@ class HomeScreen extends StatelessWidget {
         backgroundColor: Colors.deepPurple,
         foregroundColor: Colors.white,
         actions: [
-          // [TAMBAH L1] tombol toggle tema
           IconButton(
             icon: Icon(
               provider.isDarkMode ? Icons.light_mode : Icons.dark_mode,
@@ -45,6 +44,12 @@ class HomeScreen extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                       ),
                       textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8), // COUNTER
+                    Text(
+                      // COUNTER
+                      'Aplikasi sudah dibuka ${provider.visitCount} kali',
+                      style: const TextStyle(fontSize: 14, color: Colors.grey),
                     ),
                     const SizedBox(height: 16),
                     if (provider.user.isLoggedIn) ...[

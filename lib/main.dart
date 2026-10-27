@@ -12,20 +12,19 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return UserProviderWrapper(
-      // [UBAH L1] Builder supaya MaterialApp berada DI BAWAH UserProvider
       child: Builder(
         builder: (context) {
-          final provider = UserProvider.of(context); // [TAMBAH L1]
+          final provider = UserProvider.of(context); 
 
           return MaterialApp(
             title: 'State & Preferences',
             debugShowCheckedModeBanner: false,
-            themeMode: provider.isDarkMode ? ThemeMode.dark : ThemeMode.light, // [TAMBAH L1]
+            themeMode: provider.isDarkMode ? ThemeMode.dark : ThemeMode.light, 
             theme: ThemeData(
               colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
               useMaterial3: true,
             ),
-            darkTheme: ThemeData( // [TAMBAH L1]
+            darkTheme: ThemeData( 
               colorScheme: ColorScheme.fromSeed(
                 seedColor: Colors.deepPurple,
                 brightness: Brightness.dark,

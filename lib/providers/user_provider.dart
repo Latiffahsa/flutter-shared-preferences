@@ -8,8 +8,9 @@ class UserProvider extends InheritedWidget {
   final Function(User) updateUser;
   final VoidCallback logout;
   final bool isLoading;
-  final bool isDarkMode; // [TAMBAH L1]
-  final VoidCallback toggleTheme; // [TAMBAH L1]
+  final bool isDarkMode;
+  final VoidCallback toggleTheme;
+  final int visitCount; // counter
 
   const UserProvider({
     super.key,
@@ -17,8 +18,9 @@ class UserProvider extends InheritedWidget {
     required this.updateUser,
     required this.logout,
     required this.isLoading,
-    required this.isDarkMode, // [TAMBAH L1]
-    required this.toggleTheme, // [TAMBAH L1]
+    required this.isDarkMode,
+    required this.toggleTheme,
+    required this.visitCount, // Counter
     required super.child,
   });
 
@@ -32,7 +34,8 @@ class UserProvider extends InheritedWidget {
   bool updateShouldNotify(UserProvider oldWidget) {
     return oldWidget.user != user ||
         oldWidget.isLoading != isLoading ||
-        oldWidget.isDarkMode != isDarkMode; // [UBAH L1]
+        oldWidget.isDarkMode != isDarkMode ||
+        oldWidget.visitCount != visitCount; // Counter
   }
 }
 
@@ -49,7 +52,8 @@ class UserProviderWrapper extends StatefulWidget {
 class _UserProviderWrapperState extends State<UserProviderWrapper> {
   User _user = User(name: '', email: '');
   bool _isLoading = true;
-  bool _isDarkMode = false; // [TAMBAH L1]
+  bool _isDarkMode = false;
+  int _visitCount = 0; // Counter
 
   @override
   void initState() {
@@ -63,11 +67,16 @@ class _UserProviderWrapperState extends State<UserProviderWrapper> {
     final name = prefs.getString('user_name') ?? '';
     final email = prefs.getString('user_email') ?? '';
     final isLoggedIn = prefs.getBool('is_logged_in') ?? false;
-    final isDark = prefs.getBool('is_dark_mode') ?? false; // [TAMBAH L1]
+    final isDark = prefs.getBool('is_dark_mode') ?? false;
+
+    //  counter tiap aplikasi dibuka
+    final visits = (prefs.getInt('visit_count') ?? 0) + 1;
+    await prefs.setInt('visit_count', visits);
 
     setState(() {
       _user = User(name: name, email: email, isLoggedIn: isLoggedIn);
-      _isDarkMode = isDark; // [TAMBAH L1]
+      _isDarkMode = isDark;
+      _visitCount = visits; // Counter
       _isLoading = false;
     });
   }
@@ -97,7 +106,6 @@ class _UserProviderWrapperState extends State<UserProviderWrapper> {
     });
   }
 
-  // [TAMBAH L1] ganti tema dan simpan
   Future<void> _toggleTheme() async {
     final newValue = !_isDarkMode;
     setState(() {
@@ -114,8 +122,9 @@ class _UserProviderWrapperState extends State<UserProviderWrapper> {
       updateUser: _updateUser,
       logout: _logout,
       isLoading: _isLoading,
-      isDarkMode: _isDarkMode, // [TAMBAH L1]
-      toggleTheme: _toggleTheme, // [TAMBAH L1]
+      isDarkMode: _isDarkMode,
+      toggleTheme: _toggleTheme,
+      visitCount: _visitCount, // Counter
       child: widget.child,
     );
   }
