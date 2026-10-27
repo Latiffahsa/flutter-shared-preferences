@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart'; //Provider
 
 import '../providers/user_provider.dart';
 
@@ -13,14 +14,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
   late TextEditingController _emailController;
-  final _favoriteController = TextEditingController(); // Daftar Favorit
+  final _favoriteController = TextEditingController();
   bool _controllersInitialized = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_controllersInitialized) return;
-    final provider = UserProvider.of(context);
+    final provider = context.read<UserProvider>(); // Provider
     _nameController = TextEditingController(text: provider.user.name);
     _emailController = TextEditingController(text: provider.user.email);
     _controllersInitialized = true;
@@ -30,13 +31,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
-    _favoriteController.dispose(); // Daftar Favorit
+    _favoriteController.dispose();
     super.dispose();
   }
 
   void _saveProfile() {
     if (_formKey.currentState!.validate()) {
-      final provider = UserProvider.of(context);
+      final provider = context.read<UserProvider>(); // Provider
       final updatedUser = provider.user.copyWith(
         name: _nameController.text.trim(),
         email: _emailController.text.trim(),
@@ -52,12 +53,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // Daftar Favorit tambah favorit
   void _addFavorite() {
     final text = _favoriteController.text.trim();
     if (text.isEmpty) return;
 
-    final provider = UserProvider.of(context);
+    final provider = context.read<UserProvider>(); // Provider
     final sudahAda = provider.favorites.any(
       (f) => f.toLowerCase() == text.toLowerCase(),
     );
@@ -72,22 +72,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _favoriteController.clear();
   }
 
+  // Provider provider diambil sebelum dialog dibuka
   void _logout() {
+    final provider = context.read<UserProvider>();
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Logout'),
         content: const Text('Apakah Anda yakin ingin logout?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Batal'),
           ),
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
-              UserProvider.of(context).logout();
-              Navigator.pop(context);
+              Navigator.pop(dialogContext); // tutup dialog
+              provider.logout();
+              Navigator.pop(context); // kembali ke Home
             },
             child: const Text('Logout', style: TextStyle(color: Colors.red)),
           ),
@@ -98,186 +100,189 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final provider = UserProvider.of(context);
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profil'),
-        backgroundColor: Colors.deepPurple,
-        foregroundColor: Colors.white,
-        actions: [
-          if (provider.user.isLoggedIn)
-            IconButton(
-              icon: const Icon(Icons.logout),
-              onPressed: _logout,
-              tooltip: 'Logout',
-            ),
-        ],
-      ),
-      body: provider.isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const SizedBox(height: 16),
-                      const CircleAvatar(
-                        radius: 50,
-                        backgroundColor: Colors.deepPurple,
-                        child: Icon(
-                          Icons.person,
-                          size: 60,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      TextFormField(
-                        controller: _nameController,
-                        decoration: const InputDecoration(
-                          labelText: 'Nama',
-                          prefixIcon: Icon(Icons.person),
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Nama tidak boleh kosong';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _emailController,
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
-                          prefixIcon: Icon(Icons.email),
-                          border: OutlineInputBorder(),
-                        ),
-                        keyboardType: TextInputType.emailAddress,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Email tidak boleh kosong';
-                          }
-                          final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
-                          if (!emailRegex.hasMatch(value.trim())) {
-                            return 'Format email tidak valid';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 24),
-                      ElevatedButton.icon(
-                        onPressed: _saveProfile,
-                        icon: const Icon(Icons.save),
-                        label: const Text('Simpan Profil'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.deepPurple,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                      ),
-
-                      // Daftar Favorit ===== blok daftar favorit =====
-                      const SizedBox(height: 24),
-                      Text(
-                        'Daftar Favorit (Hobi)',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+    // Provider Consumer menggantikan UserProvider.of(context)
+    return Consumer<UserProvider>(
+      builder: (context, provider, _) {
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Profil'),
+            backgroundColor: Colors.deepPurple,
+            foregroundColor: Colors.white,
+            actions: [
+              if (provider.user.isLoggedIn)
+                IconButton(
+                  icon: const Icon(Icons.logout),
+                  onPressed: _logout,
+                  tooltip: 'Logout',
+                ),
+            ],
+          ),
+          body: provider.isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Expanded(
-                            child: TextFormField(
-                              controller: _favoriteController,
-                              decoration: const InputDecoration(
-                                labelText: 'Tambah favorit',
-                                prefixIcon: Icon(Icons.favorite),
-                                border: OutlineInputBorder(),
-                              ),
-                              onFieldSubmitted: (_) => _addFavorite(),
+                          const SizedBox(height: 16),
+                          const CircleAvatar(
+                            radius: 50,
+                            backgroundColor: Colors.deepPurple,
+                            child: Icon(
+                              Icons.person,
+                              size: 60,
+                              color: Colors.white,
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          IconButton.filled(
-                            onPressed: _addFavorite,
-                            icon: const Icon(Icons.add),
-                            tooltip: 'Tambah',
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      if (provider.favorites.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 8),
-                          child: Text(
-                            'Belum ada favorit.',
-                            style: TextStyle(color: Colors.grey),
-                          ),
-                        )
-                      else
-                        ...provider.favorites.map(
-                          (item) => ListTile(
-                            dense: true,
-                            contentPadding: EdgeInsets.zero,
-                            leading: const Icon(
-                              Icons.favorite,
-                              color: Colors.redAccent,
+                          const SizedBox(height: 24),
+                          TextFormField(
+                            controller: _nameController,
+                            decoration: const InputDecoration(
+                              labelText: 'Nama',
+                              prefixIcon: Icon(Icons.person),
+                              border: OutlineInputBorder(),
                             ),
-                            title: Text(item),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.delete_outline),
-                              tooltip: 'Hapus',
-                              onPressed: () => provider.removeFavorite(item),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Nama tidak boleh kosong';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _emailController,
+                            decoration: const InputDecoration(
+                              labelText: 'Email',
+                              prefixIcon: Icon(Icons.email),
+                              border: OutlineInputBorder(),
+                            ),
+                            keyboardType: TextInputType.emailAddress,
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Email tidak boleh kosong';
+                              }
+                              final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
+                              if (!emailRegex.hasMatch(value.trim())) {
+                                return 'Format email tidak valid';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 24),
+                          ElevatedButton.icon(
+                            onPressed: _saveProfile,
+                            icon: const Icon(Icons.save),
+                            label: const Text('Simpan Profil'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.deepPurple,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
                             ),
                           ),
-                        ),
-                      // Daftar Favorit ===== akhir blok favorit =====
-
-                      const SizedBox(height: 16),
-                      Card(
-                        color: Colors.amber[50],
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
+                          const SizedBox(height: 24),
+                          Text(
+                            'Daftar Favorit (Hobi)',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
+                              Expanded(
+                                child: TextFormField(
+                                  controller: _favoriteController,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Tambah favorit',
+                                    prefixIcon: Icon(Icons.favorite),
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  onFieldSubmitted: (_) => _addFavorite(),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              IconButton.filled(
+                                onPressed: _addFavorite,
+                                icon: const Icon(Icons.add),
+                                tooltip: 'Tambah',
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          if (provider.favorites.isEmpty)
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 8),
+                              child: Text(
+                                'Belum ada favorit.',
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                            )
+                          else
+                            ...provider.favorites.map(
+                              (item) => ListTile(
+                                dense: true,
+                                contentPadding: EdgeInsets.zero,
+                                leading: const Icon(
+                                  Icons.favorite,
+                                  color: Colors.redAccent,
+                                ),
+                                title: Text(item),
+                                trailing: IconButton(
+                                  icon: const Icon(Icons.delete_outline),
+                                  tooltip: 'Hapus',
+                                  onPressed: () =>
+                                      provider.removeFavorite(item),
+                                ),
+                              ),
+                            ),
+                          const SizedBox(height: 16),
+                          Card(
+                            color: Colors.amber[50],
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Icon(Icons.info, color: Colors.amber[800]),
-                                  const SizedBox(width: 8),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.info,
+                                        color: Colors.amber[800],
+                                      ),
+                                      const SizedBox(width: 8),
+                                      const Text(
+                                        'Catatan Keamanan',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
                                   const Text(
-                                    'Catatan Keamanan',
+                                    'Data disimpan di SharedPreferences (plaintext). '
+                                    'Jangan simpan password atau data sensitif di sini. '
+                                    'Gunakan secure storage untuk data sensitif.',
                                     style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black87, //Daftar Favorit
+                                      fontSize: 12,
+                                      color: Colors.black87,
                                     ),
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'Data disimpan di SharedPreferences (plaintext). '
-                                'Jangan simpan password atau data sensitif di sini. '
-                                'Gunakan secure storage untuk data sensitif.',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.black87, //Daftar Favorit
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
-                        ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
-            ),
+        );
+      },
     );
   }
 }
