@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; //Provider
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // Validasi Keamanan
 
 import '../providers/user_provider.dart';
 
@@ -17,11 +18,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _favoriteController = TextEditingController();
   bool _controllersInitialized = false;
 
+  // pola karakter berbahaya (mis. <script>)
+  final RegExp _dangerousPattern = RegExp(
+    r'[<>{}\\;`]|javascript:',
+    caseSensitive: false,
+  );
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_controllersInitialized) return;
-    final provider = context.read<UserProvider>(); // Provider
+    final provider = context.read<UserProvider>();
     _nameController = TextEditingController(text: provider.user.name);
     _emailController = TextEditingController(text: provider.user.email);
     _controllersInitialized = true;
@@ -35,29 +42,67 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.dispose();
   }
 
-  void _saveProfile() {
-    if (_formKey.currentState!.validate()) {
-      final provider = context.read<UserProvider>(); // Provider
-      final updatedUser = provider.user.copyWith(
-        name: _nameController.text.trim(),
-        email: _emailController.text.trim(),
-        isLoggedIn: true,
-      );
-      provider.updateUser(updatedUser);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Profil berhasil disimpan'),
-          backgroundColor: Colors.green,
-        ),
-      );
+  // tampilkan pesan error
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
+  }
+
+  // sekarang async + validasi keamanan
+  Future<void> _saveProfile() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final provider = context.read<UserProvider>();
+    final name = _nameController.text.trim();
+    final email = _emailController.text.trim();
+
+    if (_dangerousPattern.hasMatch(name)) {
+      _showError('Nama mengandung karakter berbahaya');
+      return;
     }
+
+    final prefs = await SharedPreferences.getInstance();
+    if (!prefs.containsKey('used_emails')) {
+      await prefs.setStringList('used_emails', [
+        'admin@example.com',
+        'test@example.com',
+      ]);
+    }
+    final usedEmails = (prefs.getStringList('used_emails') ?? [])
+        .map((e) => e.toLowerCase())
+        .toList();
+    final ownEmail = (prefs.getString('user_email') ?? '').toLowerCase();
+    final newEmail = email.toLowerCase();
+
+    if (newEmail != ownEmail && usedEmails.contains(newEmail)) {
+      _showError('Email sudah digunakan oleh akun lain');
+      return;
+    }
+
+    if (!mounted) return;
+
+    final updatedUser = provider.user.copyWith(
+      name: name,
+      email: email,
+      isLoggedIn: true,
+    );
+    await provider.updateUser(updatedUser);
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Profil berhasil disimpan'),
+        backgroundColor: Colors.green,
+      ),
+    );
   }
 
   void _addFavorite() {
     final text = _favoriteController.text.trim();
     if (text.isEmpty) return;
 
-    final provider = context.read<UserProvider>(); // Provider
+    final provider = context.read<UserProvider>();
     final sudahAda = provider.favorites.any(
       (f) => f.toLowerCase() == text.toLowerCase(),
     );
@@ -72,7 +117,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _favoriteController.clear();
   }
 
-  // Provider provider diambil sebelum dialog dibuka
   void _logout() {
     final provider = context.read<UserProvider>();
     showDialog(
@@ -87,9 +131,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           TextButton(
             onPressed: () {
-              Navigator.pop(dialogContext); // tutup dialog
+              Navigator.pop(dialogContext);
               provider.logout();
-              Navigator.pop(context); // kembali ke Home
+              Navigator.pop(context);
             },
             child: const Text('Logout', style: TextStyle(color: Colors.red)),
           ),
@@ -100,7 +144,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Provider Consumer menggantikan UserProvider.of(context)
     return Consumer<UserProvider>(
       builder: (context, provider, _) {
         return Scaffold(
